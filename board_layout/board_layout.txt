@@ -1,0 +1,38 @@
+1 - Companion processor: AMD Geode CS35536 (Southbridge)
+    - Communicates with primary CPU and compact flash
+    - Communicates with USB
+    - Handles IO
+    - Has RTC (Real-Time Clock) - Powered by CMOS battery
+2 - Main Processor: AMD Geode XL600, x86 CPU running at 500MHz
+3 - JTAG?
+4 - Physical IO chip for Layer1: Marvel 88ACS06 (octal PHY)
+    - 8 IO Ports To 8 100 MB Ethernet Ports
+5 - ROMMON: SST 49LF016C 2MB Flash chip
+6 - ASA OS: CF (Compact Flash) Card
+7 - Onboard accelerator/ASIC: 
+    - Front (FPGA) - Handles VPN
+    - Back (Cavium Nitrox Lite security macro processor) - Handles Encryption
+8 - NVRAM: ST Microelectronics 24CD4WP (4Kbit EEPROM)
+9 - Security microcontroller for Flash: Atmel 12836RCT
+    - Prevents cleartext data at rest in flash
+10 - PoE controller: Linear Technology LTC4259ACGW
+11 - DDR RAM Module
+12 - Serial Console: ADM3202 RS232 transceiver
+
+Parts list for the components:
+====================================
+U13     SN2385BDCE or LTC4259ACGW
+U31     MIC5209YM
+U33=U36 Maxim Max1876A
+U14     MK1491 clock synthesizer
+U19     STI 24CD4WP
+U4=U5   63L219 (dual FET???)
+U54     TI PW539  16bit I2C to GPIO
+U27     TI LC14A Hex inverter
+U62     NE57814DD DDR bus terminator
+U45     PIC18LF2220 Microcontroller
+U59     11J07 (Atmel 12836RCT Flash security controller)
+U61     SN74LVC08A 
+U17=U40 ADM3202
+U32     MAX5003
+U6      NE1617A temp. sensor
