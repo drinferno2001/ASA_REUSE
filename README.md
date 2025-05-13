@@ -1,5 +1,12 @@
 # ASA 5505 RE-PURPOSING
 
+## TLDR - WHERE AM I NOW (5/12/2025)?
+
+- Looking into using the ASA's hardware debugger to see if I can load a 16-bit Hello World bootloader (it's not feasible but I want to see if it's even possible)
+- Looking into seeing how I can modify the ASA firmware image to include custom code (involves stripping it down to the bare minimum to be recognizable by ROMMON)
+- Looking into CPU protected mode and how I would need to write code that handles that (second priority to above point as forcing
+ROMMON to load code is needed first).
+
 ## Purpose And Initial Premise
 
 The purpose of this project is to see whether I could run Mikrotik's Router OS (or any custom code) on a locked-down ASA 5505. 
@@ -14,6 +21,8 @@ However, when opening up the device and doing some research online, I got to lea
 in one place and wanted to get it all down while it was still fresh.**
 
 ## SOFTWARE (DEVICE BOOT PROCESS)
+
+In order to understand or get an idea of what was needed to start cracking the 5505, I needed to review the boot process. I've got it simplified below:
 
 **EMBEDDED BIOS -> ROMMON -> CISCO ASA**
 
@@ -73,3 +82,19 @@ In wanting to try and replicate this, I purchased a 16 GB CF card, inserted it i
 With reading into the documentation and utilizing [OSDev.com](https://wiki.osdev.org/Expanded_Main_Page) to get an better understanding of real-mode, interrupts, and the low-memory model, I realized that the debugger provided me with everything I could use for potentially kicking off custom code. This included the ability to execute instructions directly, moving across memory by adjusting the EIP register, and even with reading/writing to flash storage.
 
 As of currently, I'm still looking into utilizing the BIOS debugger for loading and I've even followed a [tutorial](https://medium.com/@g33konaut/writing-an-x86-hello-world-boot-loader-with-assembly-3e4c5bdd96cf) to build a 16-bit Hello World bootloader to test it. It looks like the venture might be possible but it wouldn't be entirely feasible as the code would have to be re-executed on every bootup. This led me to another option that I'm looking at concurrently (listed below).
+
+#### MODIFYING ROMMON
+
+When I originally ran into the NCC Group's research, I didn't think about making modifications to the firmware image myself. However, I took it as a potential option when I thought 'it can't be that hard?' with regards to just finding the execution entrypoint.
+
+While I had read over how good Binwalk was for binary analysis, I didn't dig into it until I ran across this github [write-up](https://gist.github.com/nstarke/ed0aba2c882b8b3078747a567ee00520) on how someone was able to use Ghidra to view the contents of a Cisco IOS image.
+
+In following that write-up loosely to do the same, I was able to utilize Binwalk to discover [three ELF (Executable and Linkable File) formatted-regions](/binwalk_analysis/extraction_log.txt) of the firmware and pull them in for analysis. As the rest of the firmware contained a mix of the linux kernel, the rootfs image mentioned before, and either blank space or CRC/hash values, I looked to just those three files for the execution entrypoint.
+
+In reviewing the format of an ELF file, listed [here](/executable_documentation/ELF_Format.pdf), I believe I was able to strike two of those files out as utilized by the linux kernel itself for system calls and I traced the entrypoint to virtual address 0x100000 (noted by Ghidra). Initially, I even modified the Hello World 16-bit bootloader to use that virtual address and tried to load it as an x86 ELF binary. However, it quickly got checked by ROMMON and it was labeled as an invalid image. 
+
+While I knew from a previous attempt that a firmware image with an invalid checksum would be allowed for booting by ROMMON if it was loaded locally with a CF writer (rather than over the network), I anticipated it failing to a degree due to the vast structual differences of my bootloader and the firmware image (it's one thing for the image to be considered valid and it's another for it to be so different that it's not even recognizable by ROMMON).
+
+I also didn't realize at the time that ROMMON was running in protected mode (which should've been obvious with the first virtual address being the first address past the low memory region (> 1 MB)) and that I would have to modify my bootloader to run in 32-bit mode and to run as a standard binary (rather than an MBR-executable).
+
+Currently, that's where I'm at. I'm looking into the specifics of protected mode (so that I can adjust the binary) and I'm looking into the possibility of stripping an existing Cisco firmware image to the bare minimum to find what needs to be recognized by ROMMON.
