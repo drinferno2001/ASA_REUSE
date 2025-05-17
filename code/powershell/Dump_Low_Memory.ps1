@@ -89,7 +89,7 @@ try{
             $serialPort.Write("")
             $serialPort.Write("$($command)`r")
 
-            Start-Sleep -Milliseconds 5000  # Give the device time to respond
+            Start-Sleep -Milliseconds 2000  # Give the device time to respond
 
             # Read response
 
@@ -120,10 +120,6 @@ try{
             $addressContents | Out-File -FilePath "$($lowMemoryDumpPath)\Memory_Dump_$($createDate).txt" -Append -Confirm:$false;
         }catch{
             throw "RESPONSE PARSING/EXPORT ERROR: $($_)"
-        }
-
-        if($decimalAddress -gt 128){
-            break;
         }
 
         # Increment in values of 128
