@@ -16,9 +16,39 @@ $serialPort = New-Object System.IO.Ports.SerialPort $portName, $baudRate, $parit
 $serialPort.ReadTimeout = 5000
 $serialPort.WriteTimeout = 5000
 
-# Export Path
+# Check to see if this a test run (so that we don't try to pull back everything in memory)
 
-$lowMemoryDumpPath = "C:\Users\ryanwork\Desktop\ASA_HWD_RECON\Device_Dumps";
+$dryRun = $null;
+
+try{
+    Write-Host "";
+    $testRunPrompt = Read-Host "Is this a test run? (Y for (YES) or anything else for (NO))"
+
+    Write-Host "";
+    if($testRunPrompt -eq "Y"){
+        $dryRun = $true;
+        Write-Host "TEST RUN SELECTED (ONLY PULL THE FIRST 512 BYTES)"
+    }else{
+        $dryRun = $false;
+        Write-Host "PROD RUN SELECTED (PULLING ENTIRE FILE)"
+    }
+}catch{
+    Write-Error "LOG: ERROR PROMPTING FOR SCRIPT EXECUTION MODE"
+}
+
+# Prompt for memory dump path
+
+$lowMemoryDumpPath = $null;
+
+try{
+    Write-Host "";
+    $lowMemoryDumpPath = Read-Host "Where do you want to save the dump (just folder name)"
+
+    # Remove trailing backslash (if provided)
+    $lowMemoryDumpPath = $lowMemoryDumpPath -replace '\\*$', "";
+}catch{
+    Write-Error "LOG: ERROR PROMPTING FOR DUMP FILE PATH"
+}
 
 Write-Host ""
 Write-Host "USING DUMP DIRECTORY AT [$($lowMemoryDumpPath)]";
@@ -35,6 +65,10 @@ if(-Not(Test-Path -Path $lowMemoryDumpPath)){
 }else{
     Write-Host "LOG: DUMP DIRECTORY [$($lowMemoryDumpPath)] ALREADY EXISTS AND WILL NOT BE RE-CREATED.";
 }
+
+# Append filename at dump path
+
+$dumpFile = "$($lowMemoryDumpPath)\Memory_Dump.txt";
 
 ##########
 # SCRIPT #
@@ -116,10 +150,14 @@ try{
 
             # Export instructions to local path
 
-            $createDate = (Get-Date).toString("MM_dd_yyyy");
-            $addressContents | Out-File -FilePath "$($lowMemoryDumpPath)\Memory_Dump_$($createDate).txt" -Append -Confirm:$false;
+            $addressContents | Out-File -FilePath $dumpFile -Append -Confirm:$false;
         }catch{
             throw "RESPONSE PARSING/EXPORT ERROR: $($_)"
+        }
+
+        # Break after 512 bytes (on 384 decimal address pull) in test mode
+        if($decimalAddress -eq 384 -and $dryRun){
+            break;
         }
 
         # Increment in values of 128
