@@ -180,3 +180,66 @@ try{
     Write-Host ""
     Write-Host "LOG: SERIAL PORT [$($portName)] CLOSED";
 }
+
+#######################################
+# CONVERT HEXDUMP FILE TO BINARY FILE #
+#######################################
+
+try{
+    Write-Host ""
+    Write-Host "CONVERTING HEX DUMP FILE TO BINARY..."
+
+    # Pull hexdump content
+
+    $hexDump = Get-Content -Path $dumpFile -Raw;
+    $hexDump = $hexDump -split "\n";
+
+    # Clean up contents by removing address info (along with ASCII/character representation)
+
+    try{
+        $dumpFileLines = New-Object System.Collections.ArrayList;
+
+        foreach($line in $hexDump){
+
+            # Skip empty lines
+            if([string]::IsNullOrWhiteSpace($line)){
+                continue;
+            }
+
+            # Remove address
+            $currentLine = $line.substring(15);
+
+            # Remove ASCII/character representations
+            $lineContents = $currentLine -split "\s+";
+            $lineContents = @($lineContents[0..14]);
+
+            # Remove middle semicolon
+            $lineContents = $lineContents | ForEach-Object{$_ -replace ":", " "};
+
+            $currentLine = $lineContents -join " ";
+
+            $null = $dumpFileLines.Add($currentLine);
+        }
+
+        $hexDump = $dumpFileLines -join " ";
+    }catch{
+        throw "ERROR CLEANING UP HEXDUMP PRIOR TO CONVERSION: $($_)"
+    }
+
+    try{
+        $binaryFile = "$($lowMemoryDumpPath)\Memory_Dump.bin";
+
+        # Convert to binary by spliting the input string by 2-character sequences and prefixing '0X' to each 2-hex-digit string
+        # (and then casting to a byte array)
+
+        [byte[]]$bytes = ($hexDump -split '\s+' | ForEach-Object{$_ -replace '^', '0X'})
+        [System.IO.File]::WriteAllBytes($binaryFile, $bytes)
+
+        Write-Host ""
+        Write-Host "FINISHED CONVERTING HEX DUMP FILE TO BINARY!"
+    }catch{
+        throw "ERROR WRITING BINARY CONTENTS: $($_)"
+    }
+}catch{
+    Write-Error "$_"
+}
